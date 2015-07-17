@@ -22,7 +22,7 @@ object SourceExtensions {
 
     def throttle(duration: FiniteDuration) = source.zip(Sources.ticks(duration)).map(_._1)
 
-    def hot(implicit materializer: Materializer) = {
+    def hot(implicit mat: Materializer) = {
       val (actorRef, hotSource) = Connector.coupling[Out]()
       source.runForeach(x => actorRef ! x)
       hotSource

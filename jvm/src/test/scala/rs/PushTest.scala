@@ -1,6 +1,6 @@
 package rs
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Flow, Broadcast, FlowGraph, Source}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import org.scalatest.BeforeAndAfterAll
 import rs.library.RsSuite
@@ -14,7 +14,9 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
 
   val actorConfigs = ActorConfigs.forName("test")
   import actorConfigs._
-  implicit val am = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1))
+  implicit val mat2 = ActorMaterializer(
+    ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
+  )
 
   describe("hot") {
     it("unicast-error") {
@@ -36,11 +38,15 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
 
 
   def fork(xs: Source[Int, Any]) = {
-    val f1 = xs.throttle(1.second).map(squaring).map(squared).take(10).runForeach(ignore)
-    val f2 = xs.map(doubling).take(10).runForeach(ignore)
-    await(f1.flatMap(_ => f2))
+    Thread.sleep(500)
+    separator()
+    val future1 = xs.throttle(200.millis).map(squaring).map(squared).take(10).runForeach(ignore)
+    Thread.sleep(500)
+    separator()
+    val future2 = xs.map(doubling).take(10).runForeach(ignore)
+    await(future1.flatMap(_ => future2))
   }
-  
+
   override protected def afterAll() = {
     system.shutdown()
   }
