@@ -40,20 +40,18 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
     }
   }
 
-  val sink = Flow[Int].take(10).toMat(Sink.ignore)(Keep.right)
   val squaringFlow = Flow[Int].throttle(200.millis).map(squaring).map(squared)
   val doublingFlow = Flow[Int].map(doubling).map(doubled)
+  val sink = Flow[Int].take(10).toMat(Sink.ignore)(Keep.right)
 
   def fork(xs: Source[Int, Any]) = {
-    def branch(flow: Flow[Int, Int, Any]) = xs.via(flow).take(10).runWith(Sink.ignore)
+    Thread.sleep(500)
+    separator()
+    val future1 = xs.via(squaringFlow).runWith(sink)
 
     Thread.sleep(500)
     separator()
-    val future1 = branch(squaringFlow)
-
-    Thread.sleep(500)
-    separator()
-    val future2 = branch(doublingFlow)
+    val future2 = xs.via(doublingFlow).runWith(sink)
 
     await(future1.flatMap(_ => future2))
   }
