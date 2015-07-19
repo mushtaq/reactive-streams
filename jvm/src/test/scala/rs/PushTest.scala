@@ -32,10 +32,10 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
     it("unicast") {
       fork(numberStream)
     }
-    it("fanout") {
+    it("multicast") {
       fork(numberStream.multicast)
     }
-    it("multicast") {
+    it("multicast-single-trigger") {
       multicastFork(numberStream)
     }
   }
@@ -45,32 +45,35 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
   val sink = Flow[Int].take(10).toMat(Sink.ignore)(Keep.right)
 
   def fork(xs: Source[Int, Any]) = {
+    val graph1 = xs.via(squaringFlow).toMat(sink)(Keep.right)
+    val graph2 = xs.via(doublingFlow).toMat(sink)(Keep.right)
+    /*
+        above is same as:
+        val graph1 = FlowGraph.closed(sink) { implicit b => s =>
+          import FlowGraph.Implicits._
+          xs ~> squaringFlow ~> s
+        }
+    */
+    val future1 = graph1.run()
     Thread.sleep(500)
     separator()
-    val future1 = xs.via(squaringFlow).runWith(sink)
-
-    Thread.sleep(500)
-    separator()
-    val future2 = xs.via(doublingFlow).runWith(sink)
+    val future2 = graph2.run()
 
     await(future1.flatMap(_ => future2))
   }
 
   def multicastFork(xs: Source[Int, Any]) = {
-    val (future1, future2) = FlowGraph.closed(sink, sink)(Keep.both) { implicit b => (sink1, sink2) =>
+    val graph = FlowGraph.closed(sink, sink)(Keep.both) { implicit b => (sink1, sink2) =>
       import FlowGraph.Implicits._
 
       val broadcast = b.add(Broadcast[Int](2))
+
       xs ~> broadcast.in
+            broadcast.out(0) ~> squaringFlow ~> sink1
+            broadcast.out(1) ~> doublingFlow ~> sink2
+    }
 
-      separator()
-      Thread.sleep(500)
-      broadcast.out(0) ~> squaringFlow ~> sink1
-
-      separator()
-      Thread.sleep(500)
-      broadcast.out(1) ~> doublingFlow ~> sink2
-    }.run()
+    val (future1, future2) = graph.run()
 
     await(future1.flatMap(_ => future2))
   }
