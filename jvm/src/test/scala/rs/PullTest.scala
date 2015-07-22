@@ -3,57 +3,63 @@ package rs
 import rs.library.RsSuite
 
 class PullTest extends RsSuite {
+
   it("eager") {
-    initializeAndFork(numbers.toList)
-  }
-  describe("lazy") {
-    describe("perishable") {
-      it("simple") {
-        separator()
-        val xs = numbers.iterator.map(initialized)
-        forkIterator(xs, xs)
-      }
-      it("cached") {
-        separator()
-        val xs = numbers.iterator.map(initialized)
-        val cachedXs = xs.toStream
-        forkIterator(cachedXs.iterator, cachedXs.iterator)
-      }
-    }
-    describe("reusable") {
-      it("simple") {
-        initializeAndFork(numbers.view)
-      }
-      it("cached") {
-        separator()
-        val xs = numbers.view.map(initialized)
-        forkSeq(xs.toStream.view)
-      }
-      it("full-memoized") {
-        initializeAndFork(numbers.toStream)
-      }
-    }
+    val xs = numbers.toList.map(read)
+    separator()
+    forkSeq(xs)
   }
 
-  def initializeAndFork(xs: Seq[Int]) = {
-    separator()
-    val ys = xs.map(initialized)
-    forkSeq(ys)
+  describe("lazy") {
+
+    describe("perishable") {
+      it("simple") {
+        val xs = numbers.iterator.map(read)
+        forkIterator(xs, xs)
+      }
+
+      describe("memoized") {
+        it("incremental") {
+          val xs = numbers.iterator.map(read)
+          val cachedXs = xs.toStream
+          forkIterator(cachedXs.iterator, cachedXs.iterator)
+        }
+        it("minimal") {
+          val xs = numbers.iterator.map(read)
+          val (it1, it2) = xs.duplicate
+          forkIterator(it1, it2)
+        }
+      }
+    }
+
+    describe("reusable") {
+      it("simple") {
+        val ys = numbers.view.map(read)
+        forkSeq(ys)
+      }
+
+      describe("memoized") {
+        it("incremental") {
+          val xs = numbers.view.map(read)
+          forkSeq(xs.toStream.view)
+        }
+        it("automatic") {
+          val ys = numbers.toStream.map(read)
+          forkSeq(ys)
+        }
+      }
+    }
   }
 
   def forkSeq(xs: Seq[Int]) = {
+    xs.map(square).take(5).foreach(ignore)
     separator()
-    xs.map(squaring).map(squared).foreach(ignore)
-    separator()
-    xs.map(doubling).map(doubled).foreach(ignore)
-    separator()
+    xs.map(double).take(10).foreach(ignore)
   }
 
   def forkIterator(xs: Iterator[Int], ys: Iterator[Int]) = {
+    xs.map(square).take(5).foreach(ignore)
     separator()
-    xs.map(squaring).map(squared).foreach(ignore)
-    separator()
-    ys.map(doubling).map(doubled).foreach(ignore)
-    separator()
+    ys.map(double).take(10).foreach(ignore)
   }
 }

@@ -1,7 +1,7 @@
 package rs
 
 import akka.stream.scaladsl._
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.{OverflowStrategy, ActorMaterializer, ActorMaterializerSettings}
 import org.scalatest.BeforeAndAfterAll
 import rs.library.FlowExtensions.RichFlow
 import rs.library.RsSuite
@@ -40,9 +40,9 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
     }
   }
 
-  val squaringFlow = Flow[Int].throttle(200.millis).map(squaring).map(squared)
-  val doublingFlow = Flow[Int].map(doubling).map(doubled)
-  val sink = Flow[Int].take(10).toMat(Sink.ignore)(Keep.right)
+  val squaringFlow = Flow[Int].throttle(200.millis).map(square).take(10)
+  val doublingFlow = Flow[Int].throttle(100.millis).map(double).take(5)
+  val sink = Sink.ignore
 
   def fork(xs: Source[Int, Any]) = {
     val graph1 = xs.via(squaringFlow).toMat(sink)(Keep.right)
@@ -53,6 +53,8 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
           import FlowGraph.Implicits._
           xs ~> squaringFlow ~> s
         }
+        it is also same as:
+        xs.via(squaringFlow).runWith(sink)
     */
     val future1 = graph1.run()
     Thread.sleep(500)
