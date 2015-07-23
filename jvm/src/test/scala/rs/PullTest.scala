@@ -4,49 +4,40 @@ import rs.library.RsSuite
 
 class PullTest extends RsSuite {
 
-  it("eager") {
-    val xs = numbers.toList.map(read)
-    separator()
-    forkSeq(xs)
-  }
-
-  describe("lazy") {
-
-    describe("perishable") {
-      it("simple") {
-        val xs = numbers.iterator.map(read)
-        forkIterator(xs, xs)
-      }
-
-      describe("memoized") {
-        it("incremental") {
-          val xs = numbers.iterator.map(read)
-          val cachedXs = xs.toStream
-          forkIterator(cachedXs.iterator, cachedXs.iterator)
-        }
-        it("minimal") {
-          val xs = numbers.iterator.map(read)
-          val (it1, it2) = xs.duplicate
-          forkIterator(it1, it2)
-        }
-      }
+  describe("perishable") {
+    it("simple") {
+      val xs = numbers.iterator.map(read)
+      forkIterator(xs, xs)
     }
 
-    describe("reusable") {
-      it("simple") {
-        val ys = numbers.view.map(read)
-        forkSeq(ys)
+    describe("memoized") {
+      it("incremental") {
+        val xs = numbers.iterator.map(read)
+        val cachedXs = xs.toStream
+        forkIterator(cachedXs.iterator, cachedXs.iterator)
       }
+      it("minimal") {
+        val xs = numbers.iterator.map(read)
+        val (it1, it2) = xs.duplicate
+        forkIterator(it1, it2)
+      }
+    }
+  }
 
-      describe("memoized") {
-        it("incremental") {
-          val xs = numbers.view.map(read)
-          forkSeq(xs.toStream.view)
-        }
-        it("automatic") {
-          val ys = numbers.toStream.map(read)
-          forkSeq(ys)
-        }
+  describe("reusable") {
+    it("simple") {
+      val ys = numbers.view.map(read)
+      forkSeq(ys)
+    }
+
+    describe("memoized") {
+      it("incremental") {
+        val xs = numbers.view.map(read)
+        forkSeq(xs.toStream.view)
+      }
+      it("automatic") {
+        val ys = numbers.toStream.map(read)
+        forkSeq(ys)
       }
     }
   }
