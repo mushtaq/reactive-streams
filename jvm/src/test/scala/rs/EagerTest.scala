@@ -11,8 +11,8 @@ class EagerTest extends RsSuite {
   }
 
   def forkSeq(xs: Seq[Int]) = {
-    xs.map(square).take(5).foreach(ignore)
+    xs.map(square).take(10).foreach(ignore)
     separator()
-    xs.map(double).take(10).foreach(ignore)
+    xs.map(double).take(5).foreach(ignore)
   }
 }
