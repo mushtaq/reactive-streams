@@ -1,7 +1,7 @@
 package rs
 
 import akka.stream.scaladsl._
-import akka.stream.{OverflowStrategy, ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape, OverflowStrategy}
 import org.scalatest.BeforeAndAfterAll
 import rs.library.FlowExtensions.RichFlow
 import rs.library.RsSuite
@@ -47,15 +47,6 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
   def fork(xs: Source[Int, Any]) = {
     val graph1 = xs.via(squaringFlow).toMat(sink)(Keep.right)
     val graph2 = xs.via(doublingFlow).toMat(sink)(Keep.right)
-    /*
-        above is same as:
-        val graph1 = FlowGraph.closed(sink) { implicit b => s =>
-          import FlowGraph.Implicits._
-          xs ~> squaringFlow ~> s
-        }
-        it is also same as:
-        xs.via(squaringFlow).runWith(sink)
-    */
     val future1 = graph1.run()
     Thread.sleep(500)
     separator()
@@ -65,22 +56,25 @@ class PushTest extends RsSuite with BeforeAndAfterAll {
   }
 
   def multicastFork(xs: Source[Int, Any]) = {
-    val graph = FlowGraph.closed(sink, sink)(Keep.both) { implicit b => (sink1, sink2) =>
-      import FlowGraph.Implicits._
+    val graph = GraphDSL.create(sink, sink)(Keep.both) { implicit b => (sink1, sink2) =>
+      import GraphDSL.Implicits._
 
       val broadcast = b.add(Broadcast[Int](2))
 
       xs ~> broadcast.in
             broadcast.out(0) ~> squaringFlow ~> sink1
             broadcast.out(1) ~> doublingFlow ~> sink2
+
+      ClosedShape
     }
 
-    val (future1, future2) = graph.run()
+    val runnableGraph = RunnableGraph.fromGraph(graph)
+    val (future1, future2) = runnableGraph.run()
 
     await(future1.flatMap(_ => future2))
   }
 
   override protected def afterAll() = {
-    system.shutdown()
+    system.terminate()
   }
 }
