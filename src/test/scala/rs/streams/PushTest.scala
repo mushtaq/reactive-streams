@@ -1,7 +1,7 @@
-package rs
+package rs.streams
 
 import akka.stream.scaladsl._
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape, OverflowStrategy}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, ClosedShape}
 import org.scalatest.BeforeAndAfterAll
 import rs.library.FlowExtensions.RichFlow
 import rs.library.RsSuite

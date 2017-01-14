@@ -1,4 +1,4 @@
-package rs.top
+package rs.reactives
 
 import rs.Specification
 

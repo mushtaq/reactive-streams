@@ -1,4 +1,4 @@
-package rs
+package rs.streams
 
 import rs.library.RsSuite
 

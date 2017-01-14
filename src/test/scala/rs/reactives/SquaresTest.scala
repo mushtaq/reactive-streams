@@ -1,4 +1,4 @@
-package rs.top
+package rs.reactives
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
