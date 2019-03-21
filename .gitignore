@@ -8,6 +8,7 @@ lib_managed/
 src_managed/
 test-output/
 .idea
+.metals
 .idea_modules
 .classpath
 .project
